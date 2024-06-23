@@ -2,30 +2,45 @@ package com.themoin.recruit.backend.common.util
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 
 val objectMapper = jacksonObjectMapper()
-val cache = ConcurrentHashMap<String, ConcurrentHashMap<String, String>>()
+data class CacheItem(val value: String, var expiryTime: LocalDateTime)
 
 
 object CustomCache {
 
-    fun set(key: CacheKey, field: String, value: String): String? {
+    private val cache = ConcurrentHashMap<String, ConcurrentHashMap<String, CacheItem>>()
+    private val subscribers = ConcurrentHashMap<String, MutableList<(String) -> Unit>>()
+
+
+    fun set(key: CacheKey, field: String, value: String, expiryTerm: Long = 60*60*24): String? {
         val fieldMap = cache.computeIfAbsent(key.name) { ConcurrentHashMap() }
-        return fieldMap.put(field, value)
+        val expiryTime = LocalDateTime.now().plusSeconds(expiryTerm)
+        val previousItem = fieldMap.put(field, CacheItem(value, expiryTime))
+        return previousItem?.value
     }
 
     fun get(key: CacheKey, field: String): String? {
-        return cache[key.name]?.get(field)
+        val item = cache[key.name]?.get(field)
+        if (item != null && item.expiryTime.isAfter(LocalDateTime.now())) {
+            return item.value
+        }
+        return null
     }
 
     fun consume(key: CacheKey, field: String): String? {
-        return cache[key.name]?.remove(field)
+        val item = cache[key.name]?.remove(field)
+        if (item != null && item.expiryTime.isAfter(LocalDateTime.now())) {
+            return item.value
+        }
+        return null
     }
 
-    inline fun <reified T> set(key: CacheKey, field: String, value: T): T? {
+    inline fun <reified T> set(key: CacheKey, field: String, value: T, expiryTerm: Long = 1): T? {
         val jsonValue = objectMapper.writeValueAsString(value)
-        val previousValueJson = set(key, field, jsonValue)
+        val previousValueJson = set(key, field, jsonValue, expiryTerm)
         return previousValueJson?.let { objectMapper.readValue<T>(it) }
     }
 
@@ -38,9 +53,21 @@ object CustomCache {
         val jsonValue = consume(key, field)
         return jsonValue?.let { objectMapper.readValue<T>(it) }
     }
-}
 
+    fun subscribe(topic : CacheTopic, callback: (String) -> Unit) {
+        val list = subscribers.getOrPut(topic.name) { mutableListOf() }
+        list.add(callback)
+    }
+
+    fun publish(topic: CacheTopic, payload: String) {
+        subscribers[topic.name]?.forEach { it(payload) }
+    }
+}
 enum class CacheKey {
     SESSION_INFO,
     TOKEN_REFRESH,
+}
+
+enum class CacheTopic(val description: String) {
+    FILL_SESSION_INFO("payload is sessionId string")
 }

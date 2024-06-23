@@ -9,7 +9,7 @@ class CustomUserDetails(
     private val authorities: Collection<GrantedAuthority>,
     val name: String,
     val idType: String,
-    val idValue: String,
+    val idVale: String = "",
 ) : UserDetails {
     override fun getAuthorities(): Collection<GrantedAuthority> = authorities
     override fun getPassword(): String = password
