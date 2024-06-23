@@ -1,0 +1,57 @@
+server:
+  port: ${SERVER_PORT}
+  servlet:
+    context-path: ${SERVER_CONTEXT_PATH}
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  datasource:
+    driver-class-name: ${DATASOURCE_DRIVER_CLASS_NAME}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    database-platform: ${DATABASE_PLATFORM}
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${HIBERNATE_DDL_AUTO}
+    defer-datasource-initialization: true
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: false
+        highlight_sql: false
+  h2:
+    console:
+      enabled: true
+      path: ${H2_CONSOLE_PATH}
+  output:
+    ansi:
+      enabled: always
+
+logging:
+  pattern:
+    console: ${LOGGING_PATTERN_CONSOLE}
+  level:
+    root: INFO
+    org:
+    hibernate:
+      SQL: TRACE
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION}
+
+springdoc:
+  packages-to-scan: ${SPRINGDOC_PACKAGES_TO_SCAN}
+  default-consumes-media-type: application/json;charset=UTF-8
+  default-produces-media-type: application/json;charset=UTF-8
+  swagger-ui:
+    path: /
+    disable-swagger-default-url: false
+    display-request-duration: true
+    operations-sorter: alpha
+
